@@ -157,10 +157,12 @@ public class Engine {
                 String encodedText = URLEncoder.encode(text, "UTF-8");
 
                 // Send a GET request to Yandex.Speller API for correction
-                URL url = new URL("http://speller.yandex" +
-                        ".net/services/spellservice.json/checkText?text="
-                        + encodedText +
-                        "&callback=fix_spell");
+//                URL url = new URL("http://speller.yandex" +
+//                        ".net/services/spellservice.json/checkText?text="
+//                        + encodedText +
+//                        "&callback=fix_spell");
+                URL url = new URL("https://speller.yandex" +
+                        ".net/services/spellservice.json/checkText?text="+encodedText);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
 
@@ -176,10 +178,7 @@ public class Engine {
                     }
                     reader.close();
 
-                    int size = response.toString().length();
-                    // Parse the JSON response using Gson
-                    String substrResponse = response.substring(10, size - 1);
-                    List<Pair> corrections = parseJsonResponse(substrResponse);
+                    List<Pair> corrections = parseJsonResponse(response.toString());
 
                     for (Pair correction : corrections) {
                         text = text.replace((String) correction.a,
@@ -200,15 +199,24 @@ public class Engine {
 
     private List<Pair> parseJsonResponse(String jsonResponse) {
         List<Pair> corrections = new ArrayList<>();
-        JsonArray jsonArray = JsonParser.parseString(jsonResponse).getAsJsonArray();
+        Gson gson = new Gson();
+        JsonArray jsonArray = gson.fromJson(jsonResponse, JsonArray.class);
 
-        for (JsonElement element : jsonArray) {
-            JsonObject jsonObject = element.getAsJsonObject();
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonObject jsonObject = jsonArray.get(i).getAsJsonObject();
+
+            // Извлекаем значения полей
+            int code = jsonObject.get("code").getAsInt();
+            int pos = jsonObject.get("pos").getAsInt();
+            int row = jsonObject.get("row").getAsInt();
+            int col = jsonObject.get("col").getAsInt();
+            int len = jsonObject.get("len").getAsInt();
             String word = jsonObject.get("word").getAsString();
-            JsonArray suggestions = jsonObject.getAsJsonArray("s");
-            for (JsonElement suggestion : suggestions) {
-                corrections.add(new Pair(word, suggestion.getAsString()));
-            }
+
+            // Обработка массива 's'
+            JsonArray sArray = jsonObject.getAsJsonArray("s");
+            String correct = sArray.get(0).getAsString();
+            corrections.add(new Pair(word, correct));
         }
         return corrections;
     }

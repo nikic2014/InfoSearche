@@ -7,12 +7,14 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +40,10 @@ public class Selenium {
         return false;
     }
 
-    public void parse(){
+    public void parse() throws IOException {
+//        ChromeOptions options = new ChromeOptions();
+//        options.setHeadless(true);
+//        WebDriver driver = new ChromeDriver(options);
         WebDriver driver = new ChromeDriver();
         driver.get("https://www.film.ru/topic/news");
         driver.manage().window().maximize();
@@ -52,58 +57,107 @@ public class Selenium {
             scrollX += 25;
 
 //            System.out.println(scrollX);
-            if (scrollX==10000)
+            if (scrollX==500000)
                 break;
         }
         List<WebElement> skins = main_topic_list.findElements(By.className(
                 "skin"));
 
-        for (int j=0;j<skins.size();j++) {
-            WebElement now = skins.get(j);
-            System.out.println("Skin " + j + ": " + now.getText());
+        List<String> topicList = new ArrayList<>();
+        for(int i=0;i<skins.size();i++) {
+            WebElement skin = skins.get(i);
+            List<WebElement> redesign_topic_List =
+                    skin.findElements(By.className(
+                    "redesign_topic"));
+            for(var j:redesign_topic_List){
+                String link = j.getAttribute("onclick");
+                link = link.substring(15);
+                link = "https://www.film.ru" + link.substring(0,
+                    link.length() - 2);
+                topicList.add(link);
+            }
         }
 
-        for(int i=0;i<skins.size();i++){
-            WebElement skin = skins.get(i);
-            List<WebElement> topicList = skin.findElements(By.className(
-                    "redesign_topic"));
-            for (int j=0;j<topicList.size();j++) {
-                WebElement now = topicList.get(j);
-                System.out.println();
-                System.out.println("Skin " + i + "redesign_topic" + j);
-                System.out.println(now.getText());
-            }
+//        FileWriter fileWriter = new FileWriter("topick list");
+//        for(var i:topicList) {
+//            fileWriter.write(i);
+//            fileWriter.append('\n');
+//        }
+//        System.out.println(topicList.size());
+//        fileWriter.close();
 
-            for (int j=0;j<topicList.size();j++) {
-                try {
-                    WebElement now = topicList.get(j);
-                    System.out.println();
-                    System.out.println("Skin " + i + "redesign_topic" + j);
-                    System.out.println(now.getText());
-                    topicList.get(j).click();
-                    String title = driver.findElement(By.tagName("h1")).getText();
-                    String body = "";
-                    WebElement divText = driver.findElement(By.className(
-                            "wrapper_articles_text"));
-                    List<WebElement> p = divText.findElements(By.tagName("p"));
-                    for (int k = 0; k < p.size(); k++) {
-                        body += p.get(k).getText();
-                    }
-                    Record record = new Record(title,
-                            body,
-                            "test");
+//        List<String> topicList;
+//        String str = Files.readString(Path.of("topick list"));
+//        topicList = List.of(str.split("\n"));
 
-                    if (!this.hasRecords(record))
-                        this.records.add(record);
+        for (var i:topicList){
+//            String link = topicList.get(i);
+            try {
+                driver.get(i);
 
-                    driver.navigate().back();
+                String title = driver.findElement(By.tagName("h1")).getText();
+                String body = "";
+                WebElement divText = driver.findElement(By.className(
+                    "wrapper_articles_text"));
+                List<WebElement> p = divText.findElements(By.tagName("p"));
+                for (int k = 0; k < p.size(); k++) {
+                    body += p.get(k).getText();
                 }
-                catch (Exception ex){
-                    System.out.println(ex.getMessage());
+                Record record = new Record(title,
+                    body,
+                    "test");
+
+                if (!this.hasRecords(record))
+                    this.records.add(record);
+
+                    System.out.println("Добавлена запись" + i + ": " + title);
                 }
+            catch (Exception ex){
+                System.out.println(ex.getMessage());
             }
         }
         driver.close();
+
+//        for(int i=0;i<skins.size();i++){
+//            WebElement skin = skins.get(i);
+//            List<WebElement> topicList = skin.findElements(By.className(
+//                    "redesign_topic"));
+//            for (int j=0;j<topicList.size();j++) {
+//                WebElement now = topicList.get(j);
+//                System.out.println();
+//                System.out.println("Skin " + i + "redesign_topic" + j);
+//                System.out.println(now.getText());
+//            }
+//
+//            for (int j=0;j<topicList.size();j++) {
+//                try {
+//                    WebElement now = topicList.get(j);
+//                    System.out.println();
+//                    System.out.println("Skin " + i + "redesign_topic" + j);
+//                    System.out.println(now.getText());
+//                    topicList.get(j).click();
+//                    String title = driver.findElement(By.tagName("h1")).getText();
+//                    String body = "";
+//                    WebElement divText = driver.findElement(By.className(
+//                            "wrapper_articles_text"));
+//                    List<WebElement> p = divText.findElements(By.tagName("p"));
+//                    for (int k = 0; k < p.size(); k++) {
+//                        body += p.get(k).getText();
+//                    }
+//                    Record record = new Record(title,
+//                            body,
+//                            "test");
+//
+//                    if (!this.hasRecords(record))
+//                        this.records.add(record);
+//
+//                    driver.navigate().back();
+//                }
+//                catch (Exception ex){
+//                    System.out.println(ex.getMessage());
+//                }
+//            }
+//        }
     }
 
     public List<Record> getRecords(){

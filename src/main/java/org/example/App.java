@@ -32,13 +32,12 @@ public class App
     public static void main( String[] args ) throws InterruptedException, IOException, ParseException {
         Selenium selenium = new Selenium();
         selenium.parseJson();
-//        selenium.parse();
-//        selenium.writeToJson();
+        selenium.parse();
+        selenium.writeToJson();
         List<Record> recordList = selenium.getRecords();
         System.out.println(recordList.size());
 
         Engine engine = new Engine();
-        System.out.println(engine.synonymFilter.addSynonyms("арестант армия"));
 
         for(int i=0;i<recordList.size();i++){
             engine.addRecord(recordList.get(i));

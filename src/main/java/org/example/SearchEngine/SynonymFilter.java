@@ -10,17 +10,22 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class SynonymFilter {
     public Map<String, List<String>> synonymMap;
     private Analyzer analyzer;
 
-    public SynonymFilter(Analyzer analyzer) throws FileNotFoundException, ParseException {
+    public SynonymFilter(Analyzer analyzer) throws IOException, ParseException {
         synonymMap = new TreeMap<>();
         this.analyzer = analyzer;
         parseSynonymsDict();
@@ -45,24 +50,20 @@ public class SynonymFilter {
             int id = wordObject.get("id").getAsInt();
             String name = wordObject.get("name").getAsString().toLowerCase();
 
-            System.out.println("Word ID: " + id);
-            System.out.println("Word Name: " + name);
             // Если есть синонимы
             if (wordObject.has("synonyms")) {
                 JsonArray synonyms = wordObject.getAsJsonArray("synonyms");
-                System.out.print("Synonyms: ");
                 List<String> synonymsList = new ArrayList<>();
 
                 for (int j = 0; j < synonyms.size(); j++) {
                     String synonym = synonyms.get(j).getAsString().toLowerCase();
                     synonymsList.add(synonym);
-                    System.out.print(synonym + " ");
                 }
                 try {
                     name = tokenize(name);
                 }
                 catch (Exception ex){
-                   System.out.println(ex.getMessage());
+//                   System.out.println(ex.getMessage());
                 }
                 if (synonymMap.containsKey(name)) {
                     for(var synonym : synonymsList)
@@ -70,9 +71,9 @@ public class SynonymFilter {
                 }
                 else
                     synonymMap.put(name, synonymsList);
-                System.out.println();
             }
         }
+        System.out.println("Синонимы спаршены");
     }
 
     public String addSynonyms(String inputStr) throws ParseException {
