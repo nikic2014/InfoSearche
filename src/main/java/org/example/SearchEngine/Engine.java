@@ -17,6 +17,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.queryparser.classic.Token;
@@ -63,11 +64,13 @@ public class Engine {
         synonymFilter = new SynonymFilter(analyzer);
     }
 
-    public void addRecord(Record record) throws IOException {
+    public void addRecord(Record record, String str) throws IOException {
         this.document = new Document();
         this.document.add(new TextField("title", record.getTitle(),
                 Field.Store.YES));
         this.document.add(new TextField("body", record.getText(),
+                Field.Store.YES));
+        this.document.add(new TextField("updBody", str,
                 Field.Store.YES));
 
         writer.addDocument(this.document);
@@ -77,17 +80,31 @@ public class Engine {
         writer.close();
     }
 
-    public List<Document> searchIndex(String inField, String queryString) throws ParseException, IOException {
+    public List<Document> searchIndex(String queryString) throws ParseException, IOException {
         queryString = correctEngToRus(queryString);
         queryString = correctRussianTypos(queryString);
         queryString = synonymFilter.addSynonyms(queryString);
-        Query query = new QueryParser(inField, analyzer)
+        Query query = new QueryParser("title", analyzer)
                 .parse(queryString);
-//        System.out.println(query.toString());
+        QueryParser multiQuery = new MultiFieldQueryParser(new String[]{"updBody", "title"}
+                , analyzer);
+        String[] fields = {"updBody", "title"};
+        MultiFieldQueryParser parser = new MultiFieldQueryParser(fields,
+                new RussianAnalyzer());
 
+        float[] boosts = {3.0f, 1.0f};
+        BooleanQuery.Builder booleanQueryBuilder = new BooleanQuery.Builder();
+        // Добавление запросов для каждого поля с соответствующим весом
+        for (int i = 0; i < fields.length; i++) {
+            Query fieldQuery = parser.parse(queryString);
+            fieldQuery = new BoostQuery(fieldQuery, boosts[i]);
+            booleanQueryBuilder.add(new BooleanClause(fieldQuery, BooleanClause.Occur.SHOULD));
+        }
+//        System.out.println(query.toString());
+        Query finalQuery = booleanQueryBuilder.build();
         IndexReader indexReader = DirectoryReader.open(memoryIndex);
         IndexSearcher searcher = new IndexSearcher(indexReader);
-        TopDocs topDocs = searcher.search(query, 10);
+        TopDocs topDocs = searcher.search(finalQuery, 10);
         List<Document> documents = new ArrayList<>();
         for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
             documents.add(searcher.doc(scoreDoc.doc));

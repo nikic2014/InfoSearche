@@ -1,5 +1,8 @@
 package org.example;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -19,6 +22,8 @@ import org.example.SearchEngine.Engine;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 
+import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,38 +37,54 @@ public class App
     public static void main( String[] args ) throws InterruptedException, IOException, ParseException {
         Selenium selenium = new Selenium();
         selenium.parseJson();
-        selenium.parse();
-        selenium.writeToJson();
+//        selenium.parse();
+//        selenium.writeToJson();
         List<Record> recordList = selenium.getRecords();
         System.out.println(recordList.size());
 
         Engine engine = new Engine();
 
-        for(int i=0;i<recordList.size();i++){
-            engine.addRecord(recordList.get(i));
+        Gson gson = new Gson();
+        String[] jsonArray;
+        try (FileReader reader = new FileReader("src/main/java/org/example" +
+                "/SearchEngine/allClassificData.json")) {
+            // Используем JsonParser для чтения файла и преобразования его в JsonElement
+            JsonElement jsonElement = JsonParser.parseReader(reader);
+            // Преобразуем JsonElement в массив строк
+            jsonArray = gson.fromJson(jsonElement, String[].class);
         }
+        for(int i=0;i<4100;i++) {
+            String updStr = jsonArray[i];
+            engine.addRecord(recordList.get(i), updStr);
+        }
+//        for(int i=0;i<recordList.size();i++){
+//            engine.addRecord(recordList.get(i));
+//        }
         System.out.println("End writing records");
 
         engine.closeWriter();
         Scanner scanner = new Scanner(System.in);
         while (true) {
-            String inField = scanner.next();
             String query = scanner.nextLine();
 
             System.out.println("Запрос:");
-            System.out.println(inField + " " + query);
+            System.out.println(query);
 
-            if (inField.equals("stop"))
+            if (query.equals("stop"))
                 break;
 
             System.out.println("Ответ:");
-            List<Document> test = engine.searchIndex(inField, query);
+            List<Document> test = engine.searchIndex(query);
             if (test.size() == 0)
                 System.out.println("Ничего не найдено");
             else
                 for (int i = 0; i < test.size(); i++) {
+                    System.out.println
+                    ("=====================================================");
                     System.out.println(test.get(i).getFields().get(0));
-//                    System.out.println(test.get(i).getFields().get(1));
+                    System.out.println(test.get(i).getFields().get(2));
+                    System.out.println
+                    ("=====================================================");
                 }
         }
     }
